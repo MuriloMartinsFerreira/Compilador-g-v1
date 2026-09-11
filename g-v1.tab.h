@@ -44,6 +44,17 @@
 #if YYDEBUG
 extern int yydebug;
 #endif
+/* "%code requires" blocks.  */
+#line 1 "g-v1.y"
+
+#include "ast.h"
+
+typedef struct {
+    char *lexeme;
+    int line;
+} TokenAttr;
+
+#line 58 "g-v1.tab.h"
 
 /* Token kinds.  */
 #ifndef YYTOKENTYPE
@@ -96,7 +107,18 @@ extern int yydebug;
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef int YYSTYPE;
+union YYSTYPE
+{
+#line 92 "g-v1.y"
+
+    int line;
+    TokenAttr token;
+    AST *node;
+
+#line 119 "g-v1.tab.h"
+
+};
+typedef union YYSTYPE YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
 #endif

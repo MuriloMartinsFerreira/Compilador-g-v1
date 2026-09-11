@@ -539,10 +539,28 @@ char *yytext;
 #line 1 "g-v1.l"
 #line 2 "g-v1.l"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "g-v1.tab.h"
-#line 544 "lex.yy.c"
 
-#line 546 "lex.yy.c"
+static char *copiar_lexema(void)
+{
+    char *copia;
+
+    copia = malloc(strlen(yytext) + 1);
+
+    if (copia == NULL) {
+        fprintf(stderr, "ERRO: memoria insuficiente\n");
+        exit(1);
+    }
+
+    strcpy(copia, yytext);
+
+    return copia;
+}
+#line 562 "lex.yy.c"
+
+#line 564 "lex.yy.c"
 
 #define INITIAL 0
 #define COMENTARIO 1
@@ -760,10 +778,10 @@ YY_DECL
 		}
 
 	{
-#line 11 "g-v1.l"
+#line 29 "g-v1.l"
 
 
-#line 767 "lex.yy.c"
+#line 785 "lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -832,67 +850,102 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 13 "g-v1.l"
-{ return PRINCIPAL; }
+#line 31 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return PRINCIPAL;
+}
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 14 "g-v1.l"
-{ return INT; }
+#line 36 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return INT;
+}
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 15 "g-v1.l"
-{ return CAR; }
+#line 41 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return CAR;
+}
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 16 "g-v1.l"
-{ return LEIA; }
+#line 46 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return LEIA;
+}
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 17 "g-v1.l"
-{ return ESCREVA; }
+#line 51 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return ESCREVA;
+}
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 18 "g-v1.l"
-{ return NOVALINHA; }
+#line 56 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return NOVALINHA;
+}
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 20 "g-v1.l"
-{ return SE; }
+#line 61 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return SE;
+}
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 21 "g-v1.l"
-{ return ENTAO; }
+#line 66 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return ENTAO;
+}
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 22 "g-v1.l"
-{ return SENAO; }
+#line 71 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return SENAO;
+}
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 23 "g-v1.l"
-{ return FIMSE; }
+#line 76 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return FIMSE;
+}
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 24 "g-v1.l"
-{ return ENQUANTO; }
+#line 81 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return ENQUANTO;
+}
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 26 "g-v1.l"
-{ BEGIN(COMENTARIO); }
+#line 86 "g-v1.l"
+{
+    BEGIN(COMENTARIO);
+}
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 28 "g-v1.l"
+#line 90 "g-v1.l"
 {
     BEGIN(INITIAL);
 }
@@ -900,35 +953,37 @@ YY_RULE_SETUP
 case 14:
 /* rule 14 can match eol */
 YY_RULE_SETUP
-#line 32 "g-v1.l"
+#line 94 "g-v1.l"
 {
 }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 35 "g-v1.l"
+#line 97 "g-v1.l"
 {
 }
 	YY_BREAK
 case YY_STATE_EOF(COMENTARIO):
-#line 38 "g-v1.l"
+#line 100 "g-v1.l"
 {
     fprintf(stderr,
             "ERRO: COMENTARIO NAO TERMINA na linha %d\n",
             yylineno);
-    exit(1);
+    return 1;
 }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 45 "g-v1.l"
+#line 107 "g-v1.l"
 {
+    yylval.token.lexeme = copiar_lexema();
+    yylval.token.line = yylineno;
     return CADEIACARACTERES;
 }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 49 "g-v1.l"
+#line 113 "g-v1.l"
 {
     fprintf(stderr,
             "ERRO: CADEIA DE CARACTERES OCUPA MAIS DE UMA LINHA na linha %d\n",
@@ -937,140 +992,209 @@ YY_RULE_SETUP
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 55 "g-v1.l"
+#line 119 "g-v1.l"
 {
+    yylval.token.lexeme = copiar_lexema();
+    yylval.token.line = yylineno;
     return CARCONST;
 }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 59 "g-v1.l"
+#line 125 "g-v1.l"
 {
+    yylval.token.lexeme = copiar_lexema();
+    yylval.token.line = yylineno;
     return INTCONST;
 }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 63 "g-v1.l"
+#line 131 "g-v1.l"
 {
+    yylval.token.lexeme = copiar_lexema();
+    yylval.token.line = yylineno;
     return IDENTIFICADOR;
 }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 67 "g-v1.l"
-{ return OU; }
+#line 137 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return OU;
+}
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 68 "g-v1.l"
-{ return E; }
+#line 142 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return E;
+}
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 70 "g-v1.l"
-{ return IGUAL; }
+#line 147 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return IGUAL;
+}
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 71 "g-v1.l"
-{ return DIFERENTE; }
+#line 152 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return DIFERENTE;
+}
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 73 "g-v1.l"
-{ return MAIORIGUAL; }
+#line 157 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return MAIORIGUAL;
+}
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 74 "g-v1.l"
-{ return MENORIGUAL; }
+#line 162 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return MENORIGUAL;
+}
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 76 "g-v1.l"
-{ return MAIS; }
+#line 167 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return MAIS;
+}
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 77 "g-v1.l"
-{ return MENOS; }
+#line 172 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return MENOS;
+}
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 78 "g-v1.l"
-{ return MULT; }
+#line 177 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return MULT;
+}
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 79 "g-v1.l"
-{ return DIV; }
+#line 182 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return DIV;
+}
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 81 "g-v1.l"
-{ return ATRIB; }
+#line 187 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return ATRIB;
+}
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 83 "g-v1.l"
-{ return MENOR; }
+#line 192 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return MENOR;
+}
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 84 "g-v1.l"
-{ return MAIOR; }
+#line 197 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return MAIOR;
+}
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 86 "g-v1.l"
-{ return NAO; }
+#line 202 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return NAO;
+}
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 88 "g-v1.l"
-{ return ABRECHAVE; }
+#line 207 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return ABRECHAVE;
+}
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 89 "g-v1.l"
-{ return FECHACHAVE; }
+#line 212 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return FECHACHAVE;
+}
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 91 "g-v1.l"
-{ return ABREPARENTESE; }
+#line 217 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return ABREPARENTESE;
+}
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 92 "g-v1.l"
-{ return FECHAPARENTESE; }
+#line 222 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return FECHAPARENTESE;
+}
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 94 "g-v1.l"
-{ return DOISPONTOS; }
+#line 227 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return DOISPONTOS;
+}
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 95 "g-v1.l"
-{ return PONTOEVIRGULA; }
+#line 232 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return PONTOEVIRGULA;
+}
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 96 "g-v1.l"
-{ return VIRGULA; }
+#line 237 "g-v1.l"
+{
+    yylval.line = yylineno;
+    return VIRGULA;
+}
 	YY_BREAK
 case 42:
 /* rule 42 can match eol */
 YY_RULE_SETUP
-#line 98 "g-v1.l"
+#line 242 "g-v1.l"
 {
 }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 101 "g-v1.l"
+#line 245 "g-v1.l"
 {
     fprintf(stderr,
             "ERRO: CARACTERE INVALIDO '%s' na linha %d\n",
@@ -1078,16 +1202,14 @@ YY_RULE_SETUP
             yylineno);
 }
 	YY_BREAK
-case YY_STATE_EOF(INITIAL):
-#line 108 "g-v1.l"
-{ return -1; }
-	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 110 "g-v1.l"
+#line 252 "g-v1.l"
 ECHO;
 	YY_BREAK
-#line 1091 "lex.yy.c"
+#line 1211 "lex.yy.c"
+case YY_STATE_EOF(INITIAL):
+	yyterminate();
 
 	case YY_END_OF_BUFFER:
 		{
@@ -2102,5 +2224,5 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 110 "g-v1.l"
+#line 252 "g-v1.l"
 

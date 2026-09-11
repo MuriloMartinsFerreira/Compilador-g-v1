@@ -51,6 +51,7 @@ static const char *ast_type_name(ASTType type)
         case AST_BLOCK:          return "BLOCK";
         case AST_DECL:           return "DECL";
         case AST_LISTA_COMANDOS: return "LISTA_COMANDOS";
+        case AST_LISTA_DECL:     return "LISTA_DECL";
 
         case AST_EMPTY:          return "EMPTY";
         case AST_ASSIGN:         return "ASSIGN";

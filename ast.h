@@ -6,6 +6,7 @@ typedef enum {
     AST_BLOCK,
     AST_DECL,
     AST_LISTA_COMANDOS,
+    AST_LISTA_DECL,
 
     AST_EMPTY,
     AST_ASSIGN,

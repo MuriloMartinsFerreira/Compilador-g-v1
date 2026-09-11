@@ -1,6 +1,7 @@
 principal
 {
     x : int;
+    y, z : car;
 }
 {
     @
