@@ -46,6 +46,7 @@
 }
 
 \"[^\n\"]*\" {
+    yylval.lexeme = copiar_lexema();
     return CADEIACARACTERES;
 }
 
@@ -56,14 +57,17 @@
 }
 
 \'([^\\'\n]|\\[nt])\' {
+    yylval.lexeme = copiar_lexema();
     return CARCONST;
 }
 
 [0-9]+ {
+    yylval.lexeme = copiar_lexema();
     return INTCONST;
 }
 
 [A-Za-z_][A-Za-z0-9_]* {
+    yylval.lexeme = copiar_lexema();
     return IDENTIFICADOR;
 }
 
@@ -111,3 +115,19 @@
 <<EOF>> { return -1; }
 
 %%
+
+static char *copiar_lexema(void)
+{
+    char *copia;
+
+    copia = malloc(strlen(yytext) + 1);
+
+    if (copia == NULL) {
+        fprintf(stderr, "ERRO: memoria insuficiente\n");
+        exit(1);
+    }
+
+    strcpy(copia, yytext);
+
+    return copia;
+}
