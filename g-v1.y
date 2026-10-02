@@ -170,10 +170,10 @@ Programa:
     }
     ;
 
-DeclPrograma:
+DeclPrograma: 
     PRINCIPAL Bloco
     {
-        $$ = ast_create(AST_BLOCK, $1, $2, NULL, NULL);
+        $$ = $2;
     }
     ;
 

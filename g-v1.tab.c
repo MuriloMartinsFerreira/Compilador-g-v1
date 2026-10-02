@@ -1271,7 +1271,7 @@ yyreduce:
   case 3: /* DeclPrograma: PRINCIPAL Bloco  */
 #line 175 "g-v1.y"
     {
-        (yyval.node) = ast_create(AST_BLOCK, (yyvsp[-1].line), (yyvsp[0].node), NULL, NULL);
+        (yyval.node) = (yyvsp[0].node);
     }
 #line 1277 "g-v1.tab.c"
     break;
