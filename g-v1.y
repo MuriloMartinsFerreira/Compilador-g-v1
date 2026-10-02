@@ -10,7 +10,7 @@ typedef struct {
 %{
 #include <stdio.h>
 #include <stdlib.h>
-
+#include "semantic.h"
 #include "ast.h"
 
 extern int yylex(void);
@@ -170,7 +170,7 @@ Programa:
     }
     ;
 
-DeclPrograma: 
+DeclPrograma:
     PRINCIPAL Bloco
     {
         $$ = $2;
@@ -527,6 +527,8 @@ void yyerror(const char *s)
 
 int main(int argc, char **argv)
 {
+    int resultado;
+
     if (argc != 2) {
         fprintf(stderr,
                 "Uso: %s arquivo.g\n",
@@ -543,10 +545,21 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    int resultado = yyparse();
+    resultado = yyparse();
 
-    ast_free(raiz);
     fclose(yyin);
 
-    return resultado;
+    if (resultado != 0) {
+        ast_free(raiz);
+        return resultado;
+    }
+
+    if (!semantic_analyze(raiz)) {
+        ast_free(raiz);
+        return 1;
+    }
+
+    ast_free(raiz);
+
+    return 0;
 }
