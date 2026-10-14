@@ -109,7 +109,7 @@ typedef struct {
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 92 "g-v1.y"
+#line 93 "g-v1.y"
 
     int line;
     TokenAttr token;

@@ -9,6 +9,8 @@ typedef enum {
 typedef struct Symbol {
     char *name;
     SymbolType type;
+    int position;
+    int scope;
     struct Symbol *next;
 } Symbol;
 

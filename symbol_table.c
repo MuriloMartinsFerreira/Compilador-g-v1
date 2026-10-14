@@ -171,6 +171,8 @@ int symbol_table_insert(SymbolTableStack *stack,
 
     symbol->name = name_copy;
     symbol->type = type;
+    symbol->position = 0;
+    symbol->scope = 0;
     symbol->next = table->buckets[index];
     table->buckets[index] = symbol;
 

@@ -3,6 +3,6 @@
 
 #include "ast.h"
 
-void codegen_generate(AST *root);
+void codegen_generate(AST *root, const char *arquivo_entrada);
 
 #endif

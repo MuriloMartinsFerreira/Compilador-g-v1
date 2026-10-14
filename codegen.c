@@ -1,43 +1,71 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "ast.h"
-#include "symbol_table.h"
+#include <string.h>
 #include "codegen.h"
-
-typedef struct StringLabel {
-    AST *node;
-    int label;
-    struct StringLabel *next;
-} StringLabel;
+#include "symbol_table.h"
 
 static SymbolTableStack symbol_stack;
 static int escopo;
 static int proxima_posicao;
 static int proximo_label;
-static int proximo_string;
-static StringLabel *strings;
+static int proxima_string;
 
-static void erro_codegen(const char *mensagem)
+typedef struct StringLabel {
+    AST *node;
+    char *label;
+    struct StringLabel *next;
+} StringLabel;
+
+static StringLabel *strings = NULL;
+
+static FILE *saida;
+
+static void erro_memoria(void)
 {
-    fprintf(stderr, "ERRO: %s\n", mensagem);
+    fprintf(stderr, "ERRO: memoria insuficiente\n");
     exit(1);
+}
+
+static char *copiar_string(const char *texto)
+{
+    char *copia;
+
+    if (texto == NULL)
+        return NULL;
+
+    copia = malloc(strlen(texto) + 1);
+
+    if (copia == NULL)
+        erro_memoria();
+
+    strcpy(copia, texto);
+
+    return copia;
+}
+
+static int novo_label(void)
+{
+    return proximo_label++;
 }
 
 static void push_temp(void)
 {
-    printf("sw $s0, 0($sp)\n");
-    printf("addiu $sp, $sp, -4\n");
+    fprintf(saida, "sw $s0, 0($sp)\n");
+    fprintf(saida, "addiu $sp, $sp, -4\n");
 }
 
 static void pop_temp(void)
 {
-    printf("lw $t1, 4($sp)\n");
-    printf("addiu $sp, $sp, 4\n");
+    fprintf(saida, "lw $t1, 4($sp)\n");
+    fprintf(saida, "addiu $sp, $sp, 4\n");
 }
 
 static int char_value(const char *lexeme)
 {
-    if (lexeme == NULL || lexeme[0] != '\'')
+    if (lexeme == NULL)
+        return 0;
+
+    if (lexeme[0] != '\'')
         return 0;
 
     if (lexeme[1] != '\\')
@@ -45,19 +73,19 @@ static int char_value(const char *lexeme)
 
     switch (lexeme[2]) {
         case 'n':
-            return '\n';
+            return 10;
         case 't':
-            return '\t';
+            return 9;
         case 'r':
-            return '\r';
+            return 13;
         case '\\':
-            return '\\';
+            return 92;
         case '\'':
-            return '\'';
+            return 39;
         case '"':
-            return '"';
+            return 34;
         case '0':
-            return '\0';
+            return 0;
         default:
             return (unsigned char)lexeme[2];
     }
@@ -74,10 +102,17 @@ static void collect_strings(AST *node)
         item = malloc(sizeof(StringLabel));
 
         if (item == NULL)
-            erro_codegen("memoria insuficiente");
+            erro_memoria();
 
         item->node = node;
-        item->label = proximo_string++;
+
+        item->label = malloc(32);
+
+        if (item->label == NULL)
+            erro_memoria();
+
+        sprintf(item->label, "str%d", proxima_string++);
+
         item->next = strings;
         strings = item;
     }
@@ -86,9 +121,11 @@ static void collect_strings(AST *node)
     collect_strings(node->child2);
 }
 
-static int string_label(AST *node)
+static const char *get_string_label(AST *node)
 {
-    StringLabel *item = strings;
+    StringLabel *item;
+
+    item = strings;
 
     while (item != NULL) {
         if (item->node == node)
@@ -97,110 +134,130 @@ static int string_label(AST *node)
         item = item->next;
     }
 
-    erro_codegen("string nao encontrada");
-    return 0;
+    return NULL;
 }
 
-static void print_string_data(void)
+static void print_strings(void)
 {
     StringLabel *item;
-    const char *texto;
-    int i;
 
-    for (item = strings; item != NULL; item = item->next) {
-        printf("str%d:\n", item->label);
-        printf("    .asciiz \"");
+    item = strings;
 
-        texto = item->node->lexeme;
+    while (item != NULL) {
+        fprintf(saida, "%s:\n", item->label);
+        fprintf(saida, "    .asciiz %s\n", item->node->lexeme);
 
-        if (texto != NULL && texto[0] == '"') {
-            texto++;
-
-            for (i = 0; texto[i] != '\0' && texto[i] != '"'; i++) {
-                if (texto[i] == '\\' && texto[i + 1] != '\0') {
-                    putchar('\\');
-                    putchar(texto[i + 1]);
-                    i++;
-                } else {
-                    putchar(texto[i]);
-                }
-            }
-        }
-
-        printf("\"\n");
+        item = item->next;
     }
 }
 
-static int count_declarations(AST *decls)
+static void free_strings(void)
 {
-    int count = 0;
-    AST *atual = decls;
+    StringLabel *item;
+    StringLabel *next;
 
-    while (atual != NULL) {
-        if (atual->child1 != NULL &&
-            atual->child1->type == AST_DECL)
-            count++;
+    item = strings;
 
-        atual = atual->child2;
+    while (item != NULL) {
+        next = item->next;
+
+        free(item->label);
+        free(item);
+
+        item = next;
     }
 
-    return count;
+    strings = NULL;
 }
 
-static void enter_scope(AST *decls)
+static int count_declarations(AST *node)
 {
-    AST *atual = decls;
-    AST *decl;
+    if (node == NULL)
+        return 0;
+
+    if (node->type == AST_DECL)
+        return 1;
+
+    return count_declarations(node->child1) +
+           count_declarations(node->child2);
+}
+
+static void register_declarations(AST *node)
+{
+    SymbolType type;
     Symbol *symbol;
+    int inserted;
 
-    symbol_table_push(&symbol_stack);
+    if (node == NULL)
+        return;
 
-    while (atual != NULL) {
-        decl = atual->child1;
-
-        if (decl != NULL && decl->type == AST_DECL) {
-            symbol_table_insert(
-                &symbol_stack,
-                decl->lexeme,
-                decl->child1->type == AST_TYPE_INT
-                    ? SYMBOL_INT
-                    : SYMBOL_CAR
-            );
-
-            symbol = symbol_table_lookup(
-                &symbol_stack,
-                decl->lexeme
-            );
-
-            if (symbol == NULL)
-                erro_codegen("falha ao inserir simbolo");
-
-            symbol->position = proxima_posicao;
-            symbol->scope = escopo;
-
-            proxima_posicao++;
-        }
-
-        atual = atual->child2;
+    if (node->type == AST_LISTA_DECL) {
+        register_declarations(node->child1);
+        register_declarations(node->child2);
+        return;
     }
-}
 
-static Symbol *find_symbol(AST *node)
-{
-    Symbol *symbol;
+    if (node->type != AST_DECL)
+        return;
 
-    if (node == NULL || node->lexeme == NULL)
-        erro_codegen("identificador invalido");
+    if (node->lexeme == NULL || node->child1 == NULL)
+        return;
+
+    if (node->child1->type == AST_TYPE_INT)
+        type = SYMBOL_INT;
+    else
+        type = SYMBOL_CAR;
+
+    inserted = symbol_table_insert(
+        &symbol_stack,
+        node->lexeme,
+        type
+    );
+
+    if (!inserted) {
+        fprintf(
+            stderr,
+            "ERRO: identificador %s ja inserido na geracao de codigo\n",
+            node->lexeme
+        );
+        exit(1);
+    }
 
     symbol = symbol_table_lookup(
         &symbol_stack,
         node->lexeme
     );
 
-    if (symbol == NULL)
-        erro_codegen(
-            "identificador nao encontrado na geracao de codigo"
+    if (symbol == NULL) {
+        fprintf(
+            stderr,
+            "ERRO: identificador %s nao encontrado na geracao de codigo\n",
+            node->lexeme
         );
+        exit(1);
+    }
+
+    symbol->position = ++proxima_posicao;
+    symbol->scope = escopo;
+}
+
+static Symbol *find_symbol(const char *name)
+{
+    Symbol *symbol;
+
+    symbol = symbol_table_lookup(
+        &symbol_stack,
+        name
+    );
+
+    if (symbol == NULL) {
+        fprintf(
+            stderr,
+            "ERRO: identificador %s nao encontrado na geracao de codigo\n",
+            name
+        );
+        exit(1);
+    }
 
     return symbol;
 }
@@ -210,44 +267,50 @@ static void cgen_command(AST *node);
 static void cgen_command_list(AST *node);
 static void cgen_block(AST *node);
 
-static void cgen_binary(AST *node, const char *instruction)
+static void cgen_equal(int diferente)
 {
-    cgen_ex(node->child1);
-    push_temp();
+    int label_true;
+    int label_end;
 
-    cgen_ex(node->child2);
-    pop_temp();
+    label_true = novo_label();
+    label_end = novo_label();
 
-    printf(
-        "%s $s0, $t1, $s0\n",
-        instruction
-    );
+    if (diferente)
+        fprintf(saida, "bne $t1, $s0, L%d\n", label_true);
+    else
+        fprintf(saida, "beq $t1, $s0, L%d\n", label_true);
+
+    fprintf(saida, "li $s0, 0\n");
+    fprintf(saida, "b L%d\n", label_end);
+
+    fprintf(saida, "L%d:\n", label_true);
+    fprintf(saida, "li $s0, 1\n");
+
+    fprintf(saida, "L%d:\n", label_end);
 }
 
-static void cgen_comparison(AST *node, const char *branch)
+static void cgen_less_equal(int maior_igual)
 {
-    int label_true = proximo_label++;
-    int label_end = proximo_label++;
+    int label_true;
+    int label_end;
 
-    cgen_ex(node->child1);
-    push_temp();
+    label_true = novo_label();
+    label_end = novo_label();
 
-    cgen_ex(node->child2);
-    pop_temp();
+    if (maior_igual)
+        fprintf(saida, "slt $s0, $s0, $t1\n");
+    else
+        fprintf(saida, "slt $s0, $t1, $s0\n");
 
-    printf(
-        "%s $t1, $s0, L%d\n",
-        branch,
-        label_true
-    );
+    fprintf(saida, "bne $s0, $zero, L%d\n", label_true);
 
-    printf("li $s0, 0\n");
-    printf("b L%d\n", label_end);
+    fprintf(saida, "li $s0, 1\n");
+    fprintf(saida, "b L%d\n", label_end);
 
-    printf("L%d:\n", label_true);
-    printf("li $s0, 1\n");
+    fprintf(saida, "L%d:\n", label_true);
+    fprintf(saida, "li $s0, 0\n");
 
-    printf("L%d:\n", label_end);
+    fprintf(saida, "L%d:\n", label_end);
 }
 
 static void cgen_ex(AST *node)
@@ -260,316 +323,338 @@ static void cgen_ex(AST *node)
         return;
 
     switch (node->type) {
-        case AST_INTCONST:
-            printf(
-                "li $s0, %s\n",
-                node->lexeme
-            );
-            return;
-
-        case AST_CARCONST:
-            printf(
-                "li $s0, %d\n",
-                char_value(node->lexeme)
-            );
-            return;
 
         case AST_IDENTIFIER:
-            symbol = find_symbol(node);
+            symbol = find_symbol(node->lexeme);
 
-            printf(
+            fprintf(saida, 
                 "lw $s0, %d($fp)\n",
                 symbol->position * 4
             );
-            return;
+            break;
+
+        case AST_INTCONST:
+            fprintf(saida, 
+                "li $s0, %s\n",
+                node->lexeme
+            );
+            break;
+
+        case AST_CARCONST:
+            fprintf(saida, 
+                "li $s0, %d\n",
+                char_value(node->lexeme)
+            );
+            break;
 
         case AST_ASSIGN:
             cgen_ex(node->child2);
 
-            symbol = find_symbol(node->child1);
+            symbol = find_symbol(
+                node->child1->lexeme
+            );
 
-            printf(
+            fprintf(saida, 
                 "sw $s0, %d($fp)\n",
                 symbol->position * 4
             );
-            return;
+            break;
 
         case AST_ADD:
-            cgen_binary(node, "add");
-            return;
+            cgen_ex(node->child1);
+            push_temp();
+            cgen_ex(node->child2);
+            pop_temp();
+
+            fprintf(saida, "add $s0, $t1, $s0\n");
+            break;
 
         case AST_SUB:
             cgen_ex(node->child1);
             push_temp();
-
             cgen_ex(node->child2);
             pop_temp();
 
-            printf("sub $s0, $t1, $s0\n");
-            return;
+            fprintf(saida, "sub $s0, $t1, $s0\n");
+            break;
 
         case AST_MUL:
             cgen_ex(node->child1);
             push_temp();
-
             cgen_ex(node->child2);
             pop_temp();
 
-            printf("mult $t1, $s0\n");
-            printf("mflo $s0\n");
-            return;
+            fprintf(saida, "mult $t1, $s0\n");
+            fprintf(saida, "mflo $s0\n");
+            break;
 
         case AST_DIV:
             cgen_ex(node->child1);
             push_temp();
-
             cgen_ex(node->child2);
             pop_temp();
 
-            printf("div $t1, $s0\n");
-            printf("mflo $s0\n");
-            return;
+            fprintf(saida, "div $t1, $s0\n");
+            fprintf(saida, "mflo $s0\n");
+            break;
 
         case AST_LT:
             cgen_ex(node->child1);
             push_temp();
-
             cgen_ex(node->child2);
             pop_temp();
 
-            printf("slt $s0, $t1, $s0\n");
-            return;
+            fprintf(saida, "slt $s0, $t1, $s0\n");
+            break;
 
         case AST_GT:
             cgen_ex(node->child1);
             push_temp();
-
             cgen_ex(node->child2);
             pop_temp();
 
-            printf("slt $s0, $s0, $t1\n");
-            return;
+            fprintf(saida, "slt $s0, $s0, $t1\n");
+            break;
 
         case AST_LE:
             cgen_ex(node->child1);
             push_temp();
-
             cgen_ex(node->child2);
             pop_temp();
 
-            label_true = proximo_label++;
-            label_end = proximo_label++;
-
-            printf("slt $s0, $s0, $t1\n");
-            printf(
-                "beq $s0, $zero, L%d\n",
-                label_true
-            );
-
-            printf("li $s0, 0\n");
-            printf("b L%d\n", label_end);
-
-            printf("L%d:\n", label_true);
-            printf("li $s0, 1\n");
-
-            printf("L%d:\n", label_end);
-            return;
+            cgen_less_equal(0);
+            break;
 
         case AST_GE:
             cgen_ex(node->child1);
             push_temp();
-
             cgen_ex(node->child2);
             pop_temp();
 
-            label_true = proximo_label++;
-            label_end = proximo_label++;
-
-            printf("slt $s0, $t1, $s0\n");
-            printf(
-                "beq $s0, $zero, L%d\n",
-                label_true
-            );
-
-            printf("li $s0, 0\n");
-            printf("b L%d\n", label_end);
-
-            printf("L%d:\n", label_true);
-            printf("li $s0, 1\n");
-
-            printf("L%d:\n", label_end);
-            return;
+            cgen_less_equal(1);
+            break;
 
         case AST_EQ:
-            cgen_comparison(node, "beq");
-            return;
+            cgen_ex(node->child1);
+            push_temp();
+            cgen_ex(node->child2);
+            pop_temp();
+
+            cgen_equal(0);
+            break;
 
         case AST_NEQ:
-            cgen_comparison(node, "bne");
-            return;
+            cgen_ex(node->child1);
+            push_temp();
+            cgen_ex(node->child2);
+            pop_temp();
+
+            cgen_equal(1);
+            break;
 
         case AST_AND:
-            cgen_binary(node, "and");
-            return;
+            cgen_ex(node->child1);
+            push_temp();
+            cgen_ex(node->child2);
+            pop_temp();
+
+            fprintf(saida, "and $s0, $t1, $s0\n");
+            break;
 
         case AST_OR:
-            cgen_binary(node, "or");
-            return;
+            cgen_ex(node->child1);
+            push_temp();
+            cgen_ex(node->child2);
+            pop_temp();
+
+            fprintf(saida, "or $s0, $t1, $s0\n");
+            break;
 
         case AST_NEG:
             cgen_ex(node->child1);
-            printf("sub $s0, $zero, $s0\n");
-            return;
+
+            fprintf(saida, 
+                "sub $s0, $zero, $s0\n"
+            );
+            break;
 
         case AST_NOT:
             cgen_ex(node->child1);
 
-            label_true = proximo_label++;
-            label_end = proximo_label++;
+            label_true = novo_label();
+            label_end = novo_label();
 
-            printf(
+            fprintf(saida, 
                 "beq $s0, $zero, L%d\n",
                 label_true
             );
 
-            printf("li $s0, 0\n");
-            printf("b L%d\n", label_end);
+            fprintf(saida, "li $s0, 0\n");
 
-            printf("L%d:\n", label_true);
-            printf("li $s0, 1\n");
+            fprintf(saida, 
+                "b L%d\n",
+                label_end
+            );
 
-            printf("L%d:\n", label_end);
-            return;
+            fprintf(saida, 
+                "L%d:\n",
+                label_true
+            );
+
+            fprintf(saida, "li $s0, 1\n");
+
+            fprintf(saida, 
+                "L%d:\n",
+                label_end
+            );
+            break;
 
         default:
-            erro_codegen("expressao nao suportada");
+            break;
     }
 }
 
 static void cgen_command(AST *node)
 {
-    Symbol *symbol;
     int label_else;
     int label_end;
     int label_while;
-    int label_while_end;
+    int label_end_while;
+    Symbol *symbol;
 
     if (node == NULL)
         return;
 
     switch (node->type) {
+
         case AST_EMPTY:
-            return;
+            break;
 
         case AST_ASSIGN:
             cgen_ex(node);
-            return;
+            break;
 
         case AST_READ:
-            symbol = find_symbol(node->child1);
+            fprintf(saida, "li $v0, 5\n");
+            fprintf(saida, "syscall\n");
 
-            printf("li $v0, 5\n");
-            printf("syscall\n");
+            symbol = find_symbol(
+                node->child1->lexeme
+            );
 
-            printf(
+            fprintf(saida, 
                 "sw $v0, %d($fp)\n",
                 symbol->position * 4
             );
-            return;
+            break;
 
         case AST_WRITE_EXPR:
             cgen_ex(node->child1);
 
-            printf("move $a0, $s0\n");
-            printf("li $v0, 1\n");
-            printf("syscall\n");
-            return;
+            fprintf(saida, "li $v0, 1\n");
+            fprintf(saida, "move $a0, $s0\n");
+            fprintf(saida, "syscall\n");
+            break;
 
         case AST_WRITE_STRING:
-            printf(
-                "la $a0, str%d\n",
-                string_label(node)
+            fprintf(saida, "li $v0, 4\n");
+            fprintf(saida, 
+                "la $a0, %s\n",
+                get_string_label(node)
             );
-
-            printf("li $v0, 4\n");
-            printf("syscall\n");
-            return;
+            fprintf(saida, "syscall\n");
+            break;
 
         case AST_NEWLINE:
-            printf("li $a0, 10\n");
-            printf("li $v0, 11\n");
-            printf("syscall\n");
-            return;
+            fprintf(saida, "li $v0, 11\n");
+            fprintf(saida, "li $a0, 10\n");
+            fprintf(saida, "syscall\n");
+            break;
 
         case AST_IF:
-            label_end = proximo_label++;
-
             cgen_ex(node->child1);
 
-            printf(
+            label_end = novo_label();
+
+            fprintf(saida, 
                 "beq $s0, $zero, L%d\n",
                 label_end
             );
 
             cgen_command(node->child2);
 
-            printf("L%d:\n", label_end);
-            return;
+            fprintf(saida, 
+                "L%d:\n",
+                label_end
+            );
+            break;
 
         case AST_IF_ELSE:
-            label_else = proximo_label++;
-            label_end = proximo_label++;
-
             cgen_ex(node->child1);
 
-            printf(
+            label_else = novo_label();
+            label_end = novo_label();
+
+            fprintf(saida, 
                 "beq $s0, $zero, L%d\n",
                 label_else
             );
 
             cgen_command(node->child2->child1);
 
-            printf(
+            fprintf(saida, 
                 "b L%d\n",
                 label_end
             );
 
-            printf("L%d:\n", label_else);
+            fprintf(saida, 
+                "L%d:\n",
+                label_else
+            );
 
             cgen_command(node->child2->child2);
 
-            printf("L%d:\n", label_end);
-            return;
+            fprintf(saida, 
+                "L%d:\n",
+                label_end
+            );
+            break;
 
         case AST_WHILE:
-            label_while = proximo_label++;
-            label_while_end = proximo_label++;
+            label_while = novo_label();
+            label_end_while = novo_label();
 
-            printf("L%d:\n", label_while);
+            fprintf(saida, 
+                "L%d:\n",
+                label_while
+            );
 
             cgen_ex(node->child1);
 
-            printf(
+            fprintf(saida, 
                 "beq $s0, $zero, L%d\n",
-                label_while_end
+                label_end_while
             );
 
             cgen_command(node->child2);
 
-            printf(
+            fprintf(saida, 
                 "b L%d\n",
                 label_while
             );
 
-            printf("L%d:\n", label_while_end);
-            return;
+            fprintf(saida, 
+                "L%d:\n",
+                label_end_while
+            );
+            break;
 
         case AST_BLOCK:
             cgen_block(node);
-            return;
+            break;
 
         default:
-            erro_codegen("comando nao suportado");
+            break;
     }
 }
 
@@ -589,22 +674,23 @@ static void cgen_command_list(AST *node)
 
 static void cgen_block(AST *node)
 {
-    int declarations;
     int locals;
+    int old_position;
 
     if (node == NULL || node->type != AST_BLOCK)
         return;
 
+    locals = count_declarations(node->child1);
+    old_position = proxima_posicao;
+
     escopo++;
 
-    declarations = node->child1 != NULL;
+    if (locals > 0) {
+        symbol_table_push(&symbol_stack);
 
-    if (declarations) {
-        locals = count_declarations(node->child1);
+        register_declarations(node->child1);
 
-        enter_scope(node->child1);
-
-        printf(
+        fprintf(saida, 
             "addiu $sp, $sp, -%d\n",
             locals * 4
         );
@@ -612,64 +698,89 @@ static void cgen_block(AST *node)
 
     cgen_command_list(node->child2);
 
-    if (declarations) {
-        locals = count_declarations(node->child1);
-
-        printf(
+    if (locals > 0) {
+        fprintf(saida, 
             "addiu $sp, $sp, %d\n",
             locals * 4
         );
 
         symbol_table_pop(&symbol_stack);
-
-        proxima_posicao -= locals;
     }
+
+    proxima_posicao = old_position;
 
     escopo--;
 }
 
-void codegen_generate(AST *root)
+void codegen_generate(AST *root, const char *arquivo_entrada)
 {
-    StringLabel *item;
-    StringLabel *next;
+    char *arquivo_saida;
+    size_t tamanho;
+    size_t comprimento;
 
-    if (root == NULL || root->type != AST_PROGRAM)
-        erro_codegen("AST invalida");
+    if (root == NULL || arquivo_entrada == NULL)
+        return;
+
+    comprimento = strlen(arquivo_entrada);
+    tamanho = comprimento + 5;
+
+    arquivo_saida = malloc(tamanho);
+
+    if (arquivo_saida == NULL)
+        erro_memoria();
+
+    strcpy(arquivo_saida, arquivo_entrada);
+
+    if (comprimento >= 2 &&
+        arquivo_saida[comprimento - 2] == '.' &&
+        arquivo_saida[comprimento - 1] == 'g') {
+        arquivo_saida[comprimento - 2] = '.';
+        arquivo_saida[comprimento - 1] = 'a';
+        arquivo_saida[comprimento] = 's';
+        arquivo_saida[comprimento + 1] = 'm';
+        arquivo_saida[comprimento + 2] = '\0';
+    } else {
+        strcat(arquivo_saida, ".asm");
+    }
+
+    saida = fopen(arquivo_saida, "w");
+
+    if (saida == NULL) {
+        fprintf(stderr, "ERRO: nao foi possivel criar o arquivo %s\n", arquivo_saida);
+        free(arquivo_saida);
+        exit(1);
+    }
 
     symbol_table_init(&symbol_stack);
 
     escopo = 0;
-    proxima_posicao = 1;
+    proxima_posicao = 0;
     proximo_label = 0;
-    proximo_string = 0;
+    proxima_string = 0;
     strings = NULL;
 
     collect_strings(root);
 
-    if (strings != NULL) {
-        printf(".data\n");
-        print_string_data();
-    }
+    fprintf(saida, ".data\n");
 
-    printf(".text\n");
-    printf(".globl main\n");
-    printf("main:\n");
-    printf("move $fp, $sp\n");
+    print_strings();
+
+    fprintf(saida, ".text\n");
+    fprintf(saida, ".globl main\n");
+    fprintf(saida, "main:\n");
+    fprintf(saida, "move $fp, $sp\n");
 
     cgen_block(root->child1);
 
-    printf("li $v0, 10\n");
-    printf("syscall\n");
+    fprintf(saida, "li $v0, 10\n");
+    fprintf(saida, "syscall\n");
 
-    item = strings;
-
-    while (item != NULL) {
-        next = item->next;
-        free(item);
-        item = next;
-    }
-
-    strings = NULL;
+    free_strings();
 
     symbol_table_free(&symbol_stack);
+
+    fclose(saida);
+    saida = NULL;
+
+    free(arquivo_saida);
 }

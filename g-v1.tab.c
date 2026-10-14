@@ -73,6 +73,7 @@
 #include <stdlib.h>
 #include "semantic.h"
 #include "ast.h"
+#include "codegen.h"
 
 extern int yylex(void);
 extern int yylineno;
@@ -149,7 +150,7 @@ static AST *criar_lista_nomes(AST *nome, AST *resto)
     return ast_create(AST_LISTA_DECL, nome->line, nome, resto, NULL);
 }
 
-#line 153 "g-v1.tab.c"
+#line 154 "g-v1.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -624,12 +625,12 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,   166,   166,   174,   181,   185,   192,   199,   219,   237,
-     240,   257,   261,   268,   272,   279,   283,   287,   301,   305,
-     317,   321,   327,   342,   346,   353,   357,   374,   378,   385,
-     389,   396,   400,   404,   411,   415,   419,   423,   427,   434,
-     438,   442,   449,   453,   457,   464,   468,   472,   479,   491,
-     503,   515
+       0,   167,   167,   175,   182,   186,   193,   200,   220,   238,
+     241,   258,   262,   269,   273,   280,   284,   288,   302,   306,
+     318,   322,   328,   343,   347,   354,   358,   375,   379,   386,
+     390,   397,   401,   405,   412,   416,   420,   424,   428,   435,
+     439,   443,   450,   454,   458,   465,   469,   473,   480,   492,
+     504,   516
 };
 #endif
 
@@ -1260,48 +1261,48 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* Programa: DeclPrograma  */
-#line 167 "g-v1.y"
+#line 168 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_PROGRAM, (yyvsp[0].node)->line, (yyvsp[0].node), NULL, NULL);
         raiz = (yyval.node);
     }
-#line 1269 "g-v1.tab.c"
+#line 1270 "g-v1.tab.c"
     break;
 
   case 3: /* DeclPrograma: PRINCIPAL Bloco  */
-#line 175 "g-v1.y"
+#line 176 "g-v1.y"
     {
         (yyval.node) = (yyvsp[0].node);
     }
-#line 1277 "g-v1.tab.c"
+#line 1278 "g-v1.tab.c"
     break;
 
   case 4: /* Bloco: ABRECHAVE ListaComando FECHACHAVE  */
-#line 182 "g-v1.y"
+#line 183 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_BLOCK, (yyvsp[-2].line), NULL, (yyvsp[-1].node), NULL);
     }
-#line 1285 "g-v1.tab.c"
+#line 1286 "g-v1.tab.c"
     break;
 
   case 5: /* Bloco: VarSection ABRECHAVE ListaComando FECHACHAVE  */
-#line 186 "g-v1.y"
+#line 187 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_BLOCK, (yyvsp[-2].line), (yyvsp[-3].node), (yyvsp[-1].node), NULL);
     }
-#line 1293 "g-v1.tab.c"
+#line 1294 "g-v1.tab.c"
     break;
 
   case 6: /* VarSection: ABRECHAVE ListaDeclVar FECHACHAVE  */
-#line 193 "g-v1.y"
+#line 194 "g-v1.y"
     {
         (yyval.node) = (yyvsp[-1].node);
     }
-#line 1301 "g-v1.tab.c"
+#line 1302 "g-v1.tab.c"
     break;
 
   case 7: /* ListaDeclVar: IDENTIFICADOR DeclVar DOISPONTOS Tipo PONTOEVIRGULA ListaDeclVar  */
-#line 200 "g-v1.y"
+#line 201 "g-v1.y"
     {
         AST *nome = ast_create(
             AST_IDENTIFIER,
@@ -1321,11 +1322,11 @@ yyreduce:
 
         free((yyvsp[-5].token).lexeme);
     }
-#line 1325 "g-v1.tab.c"
+#line 1326 "g-v1.tab.c"
     break;
 
   case 8: /* ListaDeclVar: IDENTIFICADOR DeclVar DOISPONTOS Tipo PONTOEVIRGULA  */
-#line 220 "g-v1.y"
+#line 221 "g-v1.y"
     {
         AST *nome = ast_create(
             AST_IDENTIFIER,
@@ -1340,19 +1341,19 @@ yyreduce:
 
         free((yyvsp[-4].token).lexeme);
     }
-#line 1344 "g-v1.tab.c"
+#line 1345 "g-v1.tab.c"
     break;
 
   case 9: /* DeclVar: %empty  */
-#line 237 "g-v1.y"
+#line 238 "g-v1.y"
     {
         (yyval.node) = NULL;
     }
-#line 1352 "g-v1.tab.c"
+#line 1353 "g-v1.tab.c"
     break;
 
   case 10: /* DeclVar: VIRGULA IDENTIFICADOR DeclVar  */
-#line 241 "g-v1.y"
+#line 242 "g-v1.y"
     {
         AST *nome = ast_create(
             AST_IDENTIFIER,
@@ -1366,59 +1367,59 @@ yyreduce:
 
         free((yyvsp[-1].token).lexeme);
     }
-#line 1370 "g-v1.tab.c"
+#line 1371 "g-v1.tab.c"
     break;
 
   case 11: /* Tipo: INT  */
-#line 258 "g-v1.y"
+#line 259 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_TYPE_INT, (yyvsp[0].line), NULL, NULL, "int");
     }
-#line 1378 "g-v1.tab.c"
+#line 1379 "g-v1.tab.c"
     break;
 
   case 12: /* Tipo: CAR  */
-#line 262 "g-v1.y"
+#line 263 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_TYPE_CAR, (yyvsp[0].line), NULL, NULL, "car");
     }
-#line 1386 "g-v1.tab.c"
+#line 1387 "g-v1.tab.c"
     break;
 
   case 13: /* ListaComando: Comando  */
-#line 269 "g-v1.y"
+#line 270 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_LISTA_COMANDOS, (yyvsp[0].node)->line, (yyvsp[0].node), NULL, NULL);
     }
-#line 1394 "g-v1.tab.c"
+#line 1395 "g-v1.tab.c"
     break;
 
   case 14: /* ListaComando: Comando ListaComando  */
-#line 273 "g-v1.y"
+#line 274 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_LISTA_COMANDOS, (yyvsp[-1].node)->line, (yyvsp[-1].node), (yyvsp[0].node), NULL);
     }
-#line 1402 "g-v1.tab.c"
+#line 1403 "g-v1.tab.c"
     break;
 
   case 15: /* Comando: PONTOEVIRGULA  */
-#line 280 "g-v1.y"
+#line 281 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_EMPTY, (yyvsp[0].line), NULL, NULL, NULL);
     }
-#line 1410 "g-v1.tab.c"
+#line 1411 "g-v1.tab.c"
     break;
 
   case 16: /* Comando: Expr PONTOEVIRGULA  */
-#line 284 "g-v1.y"
+#line 285 "g-v1.y"
     {
         (yyval.node) = (yyvsp[-1].node);
     }
-#line 1418 "g-v1.tab.c"
+#line 1419 "g-v1.tab.c"
     break;
 
   case 17: /* Comando: LEIA IDENTIFICADOR PONTOEVIRGULA  */
-#line 288 "g-v1.y"
+#line 289 "g-v1.y"
     {
         AST *id = ast_create(
             AST_IDENTIFIER,
@@ -1432,19 +1433,19 @@ yyreduce:
 
         free((yyvsp[-1].token).lexeme);
     }
-#line 1436 "g-v1.tab.c"
+#line 1437 "g-v1.tab.c"
     break;
 
   case 18: /* Comando: ESCREVA Expr PONTOEVIRGULA  */
-#line 302 "g-v1.y"
+#line 303 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_WRITE_EXPR, (yyvsp[-2].line), (yyvsp[-1].node), NULL, NULL);
     }
-#line 1444 "g-v1.tab.c"
+#line 1445 "g-v1.tab.c"
     break;
 
   case 19: /* Comando: ESCREVA CADEIACARACTERES PONTOEVIRGULA  */
-#line 306 "g-v1.y"
+#line 307 "g-v1.y"
     {
         (yyval.node) = ast_create(
             AST_WRITE_STRING,
@@ -1456,27 +1457,27 @@ yyreduce:
 
         free((yyvsp[-1].token).lexeme);
     }
-#line 1460 "g-v1.tab.c"
+#line 1461 "g-v1.tab.c"
     break;
 
   case 20: /* Comando: NOVALINHA PONTOEVIRGULA  */
-#line 318 "g-v1.y"
+#line 319 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_NEWLINE, (yyvsp[-1].line), NULL, NULL, NULL);
     }
-#line 1468 "g-v1.tab.c"
+#line 1469 "g-v1.tab.c"
     break;
 
   case 21: /* Comando: SE ABREPARENTESE Expr FECHAPARENTESE ENTAO Comando FIMSE  */
-#line 324 "g-v1.y"
+#line 325 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_IF, (yyvsp[-6].line), (yyvsp[-4].node), (yyvsp[-1].node), NULL);
     }
-#line 1476 "g-v1.tab.c"
+#line 1477 "g-v1.tab.c"
     break;
 
   case 22: /* Comando: SE ABREPARENTESE Expr FECHAPARENTESE ENTAO Comando SENAO Comando FIMSE  */
-#line 331 "g-v1.y"
+#line 332 "g-v1.y"
     {
         AST *ramos = ast_create(
             AST_LISTA_COMANDOS,
@@ -1488,35 +1489,35 @@ yyreduce:
 
         (yyval.node) = ast_create(AST_IF_ELSE, (yyvsp[-8].line), (yyvsp[-6].node), ramos, NULL);
     }
-#line 1492 "g-v1.tab.c"
+#line 1493 "g-v1.tab.c"
     break;
 
   case 23: /* Comando: ENQUANTO ABREPARENTESE Expr FECHAPARENTESE Comando  */
-#line 343 "g-v1.y"
+#line 344 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_WHILE, (yyvsp[-4].line), (yyvsp[-2].node), (yyvsp[0].node), NULL);
     }
-#line 1500 "g-v1.tab.c"
+#line 1501 "g-v1.tab.c"
     break;
 
   case 24: /* Comando: Bloco  */
-#line 347 "g-v1.y"
+#line 348 "g-v1.y"
     {
         (yyval.node) = (yyvsp[0].node);
     }
-#line 1508 "g-v1.tab.c"
+#line 1509 "g-v1.tab.c"
     break;
 
   case 25: /* Expr: OrExpr  */
-#line 354 "g-v1.y"
+#line 355 "g-v1.y"
     {
         (yyval.node) = (yyvsp[0].node);
     }
-#line 1516 "g-v1.tab.c"
+#line 1517 "g-v1.tab.c"
     break;
 
   case 26: /* Expr: IDENTIFICADOR ATRIB Expr  */
-#line 358 "g-v1.y"
+#line 359 "g-v1.y"
     {
         AST *id = ast_create(
             AST_IDENTIFIER,
@@ -1530,179 +1531,179 @@ yyreduce:
 
         free((yyvsp[-2].token).lexeme);
     }
-#line 1534 "g-v1.tab.c"
+#line 1535 "g-v1.tab.c"
     break;
 
   case 27: /* OrExpr: OrExpr OU AndExpr  */
-#line 375 "g-v1.y"
+#line 376 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_OR, (yyvsp[-1].line), (yyvsp[-2].node), (yyvsp[0].node), NULL);
     }
-#line 1542 "g-v1.tab.c"
+#line 1543 "g-v1.tab.c"
     break;
 
   case 28: /* OrExpr: AndExpr  */
-#line 379 "g-v1.y"
+#line 380 "g-v1.y"
     {
         (yyval.node) = (yyvsp[0].node);
     }
-#line 1550 "g-v1.tab.c"
+#line 1551 "g-v1.tab.c"
     break;
 
   case 29: /* AndExpr: AndExpr E EqExpr  */
-#line 386 "g-v1.y"
+#line 387 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_AND, (yyvsp[-1].line), (yyvsp[-2].node), (yyvsp[0].node), NULL);
     }
-#line 1558 "g-v1.tab.c"
+#line 1559 "g-v1.tab.c"
     break;
 
   case 30: /* AndExpr: EqExpr  */
-#line 390 "g-v1.y"
+#line 391 "g-v1.y"
     {
         (yyval.node) = (yyvsp[0].node);
     }
-#line 1566 "g-v1.tab.c"
+#line 1567 "g-v1.tab.c"
     break;
 
   case 31: /* EqExpr: EqExpr IGUAL DesigExpr  */
-#line 397 "g-v1.y"
+#line 398 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_EQ, (yyvsp[-1].line), (yyvsp[-2].node), (yyvsp[0].node), NULL);
     }
-#line 1574 "g-v1.tab.c"
+#line 1575 "g-v1.tab.c"
     break;
 
   case 32: /* EqExpr: EqExpr DIFERENTE DesigExpr  */
-#line 401 "g-v1.y"
+#line 402 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_NEQ, (yyvsp[-1].line), (yyvsp[-2].node), (yyvsp[0].node), NULL);
     }
-#line 1582 "g-v1.tab.c"
+#line 1583 "g-v1.tab.c"
     break;
 
   case 33: /* EqExpr: DesigExpr  */
-#line 405 "g-v1.y"
+#line 406 "g-v1.y"
     {
         (yyval.node) = (yyvsp[0].node);
     }
-#line 1590 "g-v1.tab.c"
+#line 1591 "g-v1.tab.c"
     break;
 
   case 34: /* DesigExpr: DesigExpr MENOR AddExpr  */
-#line 412 "g-v1.y"
+#line 413 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_LT, (yyvsp[-1].line), (yyvsp[-2].node), (yyvsp[0].node), NULL);
     }
-#line 1598 "g-v1.tab.c"
+#line 1599 "g-v1.tab.c"
     break;
 
   case 35: /* DesigExpr: DesigExpr MAIOR AddExpr  */
-#line 416 "g-v1.y"
+#line 417 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_GT, (yyvsp[-1].line), (yyvsp[-2].node), (yyvsp[0].node), NULL);
     }
-#line 1606 "g-v1.tab.c"
+#line 1607 "g-v1.tab.c"
     break;
 
   case 36: /* DesigExpr: DesigExpr MAIORIGUAL AddExpr  */
-#line 420 "g-v1.y"
+#line 421 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_GE, (yyvsp[-1].line), (yyvsp[-2].node), (yyvsp[0].node), NULL);
     }
-#line 1614 "g-v1.tab.c"
+#line 1615 "g-v1.tab.c"
     break;
 
   case 37: /* DesigExpr: DesigExpr MENORIGUAL AddExpr  */
-#line 424 "g-v1.y"
+#line 425 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_LE, (yyvsp[-1].line), (yyvsp[-2].node), (yyvsp[0].node), NULL);
     }
-#line 1622 "g-v1.tab.c"
+#line 1623 "g-v1.tab.c"
     break;
 
   case 38: /* DesigExpr: AddExpr  */
-#line 428 "g-v1.y"
+#line 429 "g-v1.y"
     {
         (yyval.node) = (yyvsp[0].node);
     }
-#line 1630 "g-v1.tab.c"
+#line 1631 "g-v1.tab.c"
     break;
 
   case 39: /* AddExpr: AddExpr MAIS MulExpr  */
-#line 435 "g-v1.y"
+#line 436 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_ADD, (yyvsp[-1].line), (yyvsp[-2].node), (yyvsp[0].node), NULL);
     }
-#line 1638 "g-v1.tab.c"
+#line 1639 "g-v1.tab.c"
     break;
 
   case 40: /* AddExpr: AddExpr MENOS MulExpr  */
-#line 439 "g-v1.y"
+#line 440 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_SUB, (yyvsp[-1].line), (yyvsp[-2].node), (yyvsp[0].node), NULL);
     }
-#line 1646 "g-v1.tab.c"
+#line 1647 "g-v1.tab.c"
     break;
 
   case 41: /* AddExpr: MulExpr  */
-#line 443 "g-v1.y"
+#line 444 "g-v1.y"
     {
         (yyval.node) = (yyvsp[0].node);
     }
-#line 1654 "g-v1.tab.c"
+#line 1655 "g-v1.tab.c"
     break;
 
   case 42: /* MulExpr: MulExpr MULT UnExpr  */
-#line 450 "g-v1.y"
+#line 451 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_MUL, (yyvsp[-1].line), (yyvsp[-2].node), (yyvsp[0].node), NULL);
     }
-#line 1662 "g-v1.tab.c"
+#line 1663 "g-v1.tab.c"
     break;
 
   case 43: /* MulExpr: MulExpr DIV UnExpr  */
-#line 454 "g-v1.y"
+#line 455 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_DIV, (yyvsp[-1].line), (yyvsp[-2].node), (yyvsp[0].node), NULL);
     }
-#line 1670 "g-v1.tab.c"
+#line 1671 "g-v1.tab.c"
     break;
 
   case 44: /* MulExpr: UnExpr  */
-#line 458 "g-v1.y"
+#line 459 "g-v1.y"
     {
         (yyval.node) = (yyvsp[0].node);
     }
-#line 1678 "g-v1.tab.c"
+#line 1679 "g-v1.tab.c"
     break;
 
   case 45: /* UnExpr: MENOS PrimExpr  */
-#line 465 "g-v1.y"
+#line 466 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_NEG, (yyvsp[-1].line), (yyvsp[0].node), NULL, NULL);
     }
-#line 1686 "g-v1.tab.c"
+#line 1687 "g-v1.tab.c"
     break;
 
   case 46: /* UnExpr: NAO PrimExpr  */
-#line 469 "g-v1.y"
+#line 470 "g-v1.y"
     {
         (yyval.node) = ast_create(AST_NOT, (yyvsp[-1].line), (yyvsp[0].node), NULL, NULL);
     }
-#line 1694 "g-v1.tab.c"
+#line 1695 "g-v1.tab.c"
     break;
 
   case 47: /* UnExpr: PrimExpr  */
-#line 473 "g-v1.y"
+#line 474 "g-v1.y"
     {
         (yyval.node) = (yyvsp[0].node);
     }
-#line 1702 "g-v1.tab.c"
+#line 1703 "g-v1.tab.c"
     break;
 
   case 48: /* PrimExpr: IDENTIFICADOR  */
-#line 480 "g-v1.y"
+#line 481 "g-v1.y"
     {
         (yyval.node) = ast_create(
             AST_IDENTIFIER,
@@ -1714,11 +1715,11 @@ yyreduce:
 
         free((yyvsp[0].token).lexeme);
     }
-#line 1718 "g-v1.tab.c"
+#line 1719 "g-v1.tab.c"
     break;
 
   case 49: /* PrimExpr: CARCONST  */
-#line 492 "g-v1.y"
+#line 493 "g-v1.y"
     {
         (yyval.node) = ast_create(
             AST_CARCONST,
@@ -1730,11 +1731,11 @@ yyreduce:
 
         free((yyvsp[0].token).lexeme);
     }
-#line 1734 "g-v1.tab.c"
+#line 1735 "g-v1.tab.c"
     break;
 
   case 50: /* PrimExpr: INTCONST  */
-#line 504 "g-v1.y"
+#line 505 "g-v1.y"
     {
         (yyval.node) = ast_create(
             AST_INTCONST,
@@ -1746,19 +1747,19 @@ yyreduce:
 
         free((yyvsp[0].token).lexeme);
     }
-#line 1750 "g-v1.tab.c"
+#line 1751 "g-v1.tab.c"
     break;
 
   case 51: /* PrimExpr: ABREPARENTESE Expr FECHAPARENTESE  */
-#line 516 "g-v1.y"
+#line 517 "g-v1.y"
     {
         (yyval.node) = (yyvsp[-1].node);
     }
-#line 1758 "g-v1.tab.c"
+#line 1759 "g-v1.tab.c"
     break;
 
 
-#line 1762 "g-v1.tab.c"
+#line 1763 "g-v1.tab.c"
 
       default: break;
     }
@@ -1951,7 +1952,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 521 "g-v1.y"
+#line 522 "g-v1.y"
 
 
 void yyerror(const char *s)
@@ -1992,6 +1993,8 @@ int main(int argc, char **argv)
         ast_free(raiz);
         return 1;
     }
+
+    codegen_generate(raiz, argv[1]);
 
     ast_free(raiz);
 

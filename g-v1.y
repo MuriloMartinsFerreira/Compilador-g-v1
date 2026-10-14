@@ -12,6 +12,7 @@ typedef struct {
 #include <stdlib.h>
 #include "semantic.h"
 #include "ast.h"
+#include "codegen.h"
 
 extern int yylex(void);
 extern int yylineno;
@@ -558,6 +559,8 @@ int main(int argc, char **argv)
         ast_free(raiz);
         return 1;
     }
+
+    codegen_generate(raiz, argv[1]);
 
     ast_free(raiz);
 
