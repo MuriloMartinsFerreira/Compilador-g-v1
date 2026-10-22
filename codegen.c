@@ -26,23 +26,6 @@ static void erro_memoria(void)
     exit(1);
 }
 
-static char *copiar_string(const char *texto)
-{
-    char *copia;
-
-    if (texto == NULL)
-        return NULL;
-
-    copia = malloc(strlen(texto) + 1);
-
-    if (copia == NULL)
-        erro_memoria();
-
-    strcpy(copia, texto);
-
-    return copia;
-}
-
 static int novo_label(void)
 {
     return proximo_label++;
@@ -80,7 +63,7 @@ static int char_value(const char *lexeme)
             return 13;
         case '\\':
             return 92;
-        case '\'':
+        case '\'': 
             return 39;
         case '"':
             return 34;
@@ -105,14 +88,12 @@ static void collect_strings(AST *node)
             erro_memoria();
 
         item->node = node;
-
         item->label = malloc(32);
 
         if (item->label == NULL)
             erro_memoria();
 
         sprintf(item->label, "str%d", proxima_string++);
-
         item->next = strings;
         strings = item;
     }
@@ -123,9 +104,7 @@ static void collect_strings(AST *node)
 
 static const char *get_string_label(AST *node)
 {
-    StringLabel *item;
-
-    item = strings;
+    StringLabel *item = strings;
 
     while (item != NULL) {
         if (item->node == node)
@@ -139,31 +118,24 @@ static const char *get_string_label(AST *node)
 
 static void print_strings(void)
 {
-    StringLabel *item;
-
-    item = strings;
+    StringLabel *item = strings;
 
     while (item != NULL) {
         fprintf(saida, "%s:\n", item->label);
         fprintf(saida, "    .asciiz %s\n", item->node->lexeme);
-
         item = item->next;
     }
 }
 
 static void free_strings(void)
 {
-    StringLabel *item;
+    StringLabel *item = strings;
     StringLabel *next;
-
-    item = strings;
 
     while (item != NULL) {
         next = item->next;
-
         free(item->label);
         free(item);
-
         item = next;
     }
 
@@ -208,32 +180,21 @@ static void register_declarations(AST *node)
     else
         type = SYMBOL_CAR;
 
-    inserted = symbol_table_insert(
-        &symbol_stack,
-        node->lexeme,
-        type
-    );
+    inserted = symbol_table_insert(&symbol_stack, node->lexeme, type);
 
     if (!inserted) {
-        fprintf(
-            stderr,
-            "ERRO: identificador %s ja inserido na geracao de codigo\n",
-            node->lexeme
-        );
+        fprintf(stderr,
+                "ERRO: identificador %s ja inserido na geracao de codigo\n",
+                node->lexeme);
         exit(1);
     }
 
-    symbol = symbol_table_lookup(
-        &symbol_stack,
-        node->lexeme
-    );
+    symbol = symbol_table_lookup(&symbol_stack, node->lexeme);
 
     if (symbol == NULL) {
-        fprintf(
-            stderr,
-            "ERRO: identificador %s nao encontrado na geracao de codigo\n",
-            node->lexeme
-        );
+        fprintf(stderr,
+                "ERRO: identificador %s nao encontrado na geracao de codigo\n",
+                node->lexeme);
         exit(1);
     }
 
@@ -243,19 +204,12 @@ static void register_declarations(AST *node)
 
 static Symbol *find_symbol(const char *name)
 {
-    Symbol *symbol;
-
-    symbol = symbol_table_lookup(
-        &symbol_stack,
-        name
-    );
+    Symbol *symbol = symbol_table_lookup(&symbol_stack, name);
 
     if (symbol == NULL) {
-        fprintf(
-            stderr,
-            "ERRO: identificador %s nao encontrado na geracao de codigo\n",
-            name
-        );
+        fprintf(stderr,
+                "ERRO: identificador %s nao encontrado na geracao de codigo\n",
+                name);
         exit(1);
     }
 
@@ -267,13 +221,35 @@ static void cgen_command(AST *node);
 static void cgen_command_list(AST *node);
 static void cgen_block(AST *node);
 
+/* Retorna 1 se a expressao tem tipo car, 0 se int.
+   Chamada somente apos a analise semantica (programa ja validado). */
+static int expr_is_car(AST *node)
+{
+    Symbol *symbol;
+
+    if (node == NULL)
+        return 0;
+
+    switch (node->type) {
+        case AST_CARCONST:
+            return 1;
+
+        case AST_IDENTIFIER:
+            symbol = symbol_table_lookup(&symbol_stack, node->lexeme);
+            return symbol != NULL && symbol->type == SYMBOL_CAR;
+
+        case AST_ASSIGN:
+            return expr_is_car(node->child1);
+
+        default:
+            return 0;
+    }
+}
+
 static void cgen_equal(int diferente)
 {
-    int label_true;
-    int label_end;
-
-    label_true = novo_label();
-    label_end = novo_label();
+    int label_true = novo_label();
+    int label_end = novo_label();
 
     if (diferente)
         fprintf(saida, "bne $t1, $s0, L%d\n", label_true);
@@ -282,20 +258,15 @@ static void cgen_equal(int diferente)
 
     fprintf(saida, "li $s0, 0\n");
     fprintf(saida, "b L%d\n", label_end);
-
     fprintf(saida, "L%d:\n", label_true);
     fprintf(saida, "li $s0, 1\n");
-
     fprintf(saida, "L%d:\n", label_end);
 }
 
 static void cgen_less_equal(int maior_igual)
 {
-    int label_true;
-    int label_end;
-
-    label_true = novo_label();
-    label_end = novo_label();
+    int label_true = novo_label();
+    int label_end = novo_label();
 
     if (maior_igual)
         fprintf(saida, "slt $s0, $s0, $t1\n");
@@ -303,13 +274,10 @@ static void cgen_less_equal(int maior_igual)
         fprintf(saida, "slt $s0, $t1, $s0\n");
 
     fprintf(saida, "bne $s0, $zero, L%d\n", label_true);
-
     fprintf(saida, "li $s0, 1\n");
     fprintf(saida, "b L%d\n", label_end);
-
     fprintf(saida, "L%d:\n", label_true);
     fprintf(saida, "li $s0, 0\n");
-
     fprintf(saida, "L%d:\n", label_end);
 }
 
@@ -323,41 +291,25 @@ static void cgen_ex(AST *node)
         return;
 
     switch (node->type) {
-
         case AST_IDENTIFIER:
             symbol = find_symbol(node->lexeme);
-
-            fprintf(saida, 
-                "lw $s0, %d($fp)\n",
-                symbol->position * 4
-            );
+            fprintf(saida, "lw $s0, %d($fp)\n",
+                    -(symbol->position - 1) * 4);
             break;
 
         case AST_INTCONST:
-            fprintf(saida, 
-                "li $s0, %s\n",
-                node->lexeme
-            );
+            fprintf(saida, "li $s0, %s\n", node->lexeme);
             break;
 
         case AST_CARCONST:
-            fprintf(saida, 
-                "li $s0, %d\n",
-                char_value(node->lexeme)
-            );
+            fprintf(saida, "li $s0, %d\n", char_value(node->lexeme));
             break;
 
         case AST_ASSIGN:
             cgen_ex(node->child2);
-
-            symbol = find_symbol(
-                node->child1->lexeme
-            );
-
-            fprintf(saida, 
-                "sw $s0, %d($fp)\n",
-                symbol->position * 4
-            );
+            symbol = find_symbol(node->child1->lexeme);
+            fprintf(saida, "sw $s0, %d($fp)\n",
+                    -(symbol->position - 1) * 4);
             break;
 
         case AST_ADD:
@@ -365,7 +317,6 @@ static void cgen_ex(AST *node)
             push_temp();
             cgen_ex(node->child2);
             pop_temp();
-
             fprintf(saida, "add $s0, $t1, $s0\n");
             break;
 
@@ -374,7 +325,6 @@ static void cgen_ex(AST *node)
             push_temp();
             cgen_ex(node->child2);
             pop_temp();
-
             fprintf(saida, "sub $s0, $t1, $s0\n");
             break;
 
@@ -383,7 +333,6 @@ static void cgen_ex(AST *node)
             push_temp();
             cgen_ex(node->child2);
             pop_temp();
-
             fprintf(saida, "mult $t1, $s0\n");
             fprintf(saida, "mflo $s0\n");
             break;
@@ -393,7 +342,6 @@ static void cgen_ex(AST *node)
             push_temp();
             cgen_ex(node->child2);
             pop_temp();
-
             fprintf(saida, "div $t1, $s0\n");
             fprintf(saida, "mflo $s0\n");
             break;
@@ -403,7 +351,6 @@ static void cgen_ex(AST *node)
             push_temp();
             cgen_ex(node->child2);
             pop_temp();
-
             fprintf(saida, "slt $s0, $t1, $s0\n");
             break;
 
@@ -412,7 +359,6 @@ static void cgen_ex(AST *node)
             push_temp();
             cgen_ex(node->child2);
             pop_temp();
-
             fprintf(saida, "slt $s0, $s0, $t1\n");
             break;
 
@@ -421,8 +367,7 @@ static void cgen_ex(AST *node)
             push_temp();
             cgen_ex(node->child2);
             pop_temp();
-
-            cgen_less_equal(0);
+            cgen_less_equal(1);
             break;
 
         case AST_GE:
@@ -430,8 +375,7 @@ static void cgen_ex(AST *node)
             push_temp();
             cgen_ex(node->child2);
             pop_temp();
-
-            cgen_less_equal(1);
+            cgen_less_equal(0);
             break;
 
         case AST_EQ:
@@ -439,7 +383,6 @@ static void cgen_ex(AST *node)
             push_temp();
             cgen_ex(node->child2);
             pop_temp();
-
             cgen_equal(0);
             break;
 
@@ -448,7 +391,6 @@ static void cgen_ex(AST *node)
             push_temp();
             cgen_ex(node->child2);
             pop_temp();
-
             cgen_equal(1);
             break;
 
@@ -457,7 +399,8 @@ static void cgen_ex(AST *node)
             push_temp();
             cgen_ex(node->child2);
             pop_temp();
-
+            fprintf(saida, "sltu $t1, $zero, $t1\n");
+            fprintf(saida, "sltu $s0, $zero, $s0\n");
             fprintf(saida, "and $s0, $t1, $s0\n");
             break;
 
@@ -466,47 +409,26 @@ static void cgen_ex(AST *node)
             push_temp();
             cgen_ex(node->child2);
             pop_temp();
-
+            fprintf(saida, "sltu $t1, $zero, $t1\n");
+            fprintf(saida, "sltu $s0, $zero, $s0\n");
             fprintf(saida, "or $s0, $t1, $s0\n");
             break;
 
         case AST_NEG:
             cgen_ex(node->child1);
-
-            fprintf(saida, 
-                "sub $s0, $zero, $s0\n"
-            );
+            fprintf(saida, "sub $s0, $zero, $s0\n");
             break;
 
         case AST_NOT:
             cgen_ex(node->child1);
-
             label_true = novo_label();
             label_end = novo_label();
-
-            fprintf(saida, 
-                "beq $s0, $zero, L%d\n",
-                label_true
-            );
-
+            fprintf(saida, "beq $s0, $zero, L%d\n", label_true);
             fprintf(saida, "li $s0, 0\n");
-
-            fprintf(saida, 
-                "b L%d\n",
-                label_end
-            );
-
-            fprintf(saida, 
-                "L%d:\n",
-                label_true
-            );
-
+            fprintf(saida, "b L%d\n", label_end);
+            fprintf(saida, "L%d:\n", label_true);
             fprintf(saida, "li $s0, 1\n");
-
-            fprintf(saida, 
-                "L%d:\n",
-                label_end
-            );
+            fprintf(saida, "L%d:\n", label_end);
             break;
 
         default:
@@ -526,7 +448,6 @@ static void cgen_command(AST *node)
         return;
 
     switch (node->type) {
-
         case AST_EMPTY:
             break;
 
@@ -535,33 +456,33 @@ static void cgen_command(AST *node)
             break;
 
         case AST_READ:
-            fprintf(saida, "li $v0, 5\n");
+            symbol = find_symbol(node->child1->lexeme);
+
+            if (symbol->type == SYMBOL_CAR)
+                fprintf(saida, "li $v0, 12\n");
+            else
+                fprintf(saida, "li $v0, 5\n");
+
             fprintf(saida, "syscall\n");
-
-            symbol = find_symbol(
-                node->child1->lexeme
-            );
-
-            fprintf(saida, 
-                "sw $v0, %d($fp)\n",
-                symbol->position * 4
-            );
+            fprintf(saida, "sw $v0, %d($fp)\n",
+                    -(symbol->position - 1) * 4);
             break;
 
         case AST_WRITE_EXPR:
             cgen_ex(node->child1);
 
-            fprintf(saida, "li $v0, 1\n");
+            if (expr_is_car(node->child1))
+                fprintf(saida, "li $v0, 11\n");
+            else
+                fprintf(saida, "li $v0, 1\n");
+
             fprintf(saida, "move $a0, $s0\n");
             fprintf(saida, "syscall\n");
             break;
 
         case AST_WRITE_STRING:
             fprintf(saida, "li $v0, 4\n");
-            fprintf(saida, 
-                "la $a0, %s\n",
-                get_string_label(node)
-            );
+            fprintf(saida, "la $a0, %s\n", get_string_label(node));
             fprintf(saida, "syscall\n");
             break;
 
@@ -573,80 +494,33 @@ static void cgen_command(AST *node)
 
         case AST_IF:
             cgen_ex(node->child1);
-
             label_end = novo_label();
-
-            fprintf(saida, 
-                "beq $s0, $zero, L%d\n",
-                label_end
-            );
-
+            fprintf(saida, "beq $s0, $zero, L%d\n", label_end);
             cgen_command(node->child2);
-
-            fprintf(saida, 
-                "L%d:\n",
-                label_end
-            );
+            fprintf(saida, "L%d:\n", label_end);
             break;
 
         case AST_IF_ELSE:
             cgen_ex(node->child1);
-
             label_else = novo_label();
             label_end = novo_label();
-
-            fprintf(saida, 
-                "beq $s0, $zero, L%d\n",
-                label_else
-            );
-
+            fprintf(saida, "beq $s0, $zero, L%d\n", label_else);
             cgen_command(node->child2->child1);
-
-            fprintf(saida, 
-                "b L%d\n",
-                label_end
-            );
-
-            fprintf(saida, 
-                "L%d:\n",
-                label_else
-            );
-
+            fprintf(saida, "b L%d\n", label_end);
+            fprintf(saida, "L%d:\n", label_else);
             cgen_command(node->child2->child2);
-
-            fprintf(saida, 
-                "L%d:\n",
-                label_end
-            );
+            fprintf(saida, "L%d:\n", label_end);
             break;
 
         case AST_WHILE:
             label_while = novo_label();
             label_end_while = novo_label();
-
-            fprintf(saida, 
-                "L%d:\n",
-                label_while
-            );
-
+            fprintf(saida, "L%d:\n", label_while);
             cgen_ex(node->child1);
-
-            fprintf(saida, 
-                "beq $s0, $zero, L%d\n",
-                label_end_while
-            );
-
+            fprintf(saida, "beq $s0, $zero, L%d\n", label_end_while);
             cgen_command(node->child2);
-
-            fprintf(saida, 
-                "b L%d\n",
-                label_while
-            );
-
-            fprintf(saida, 
-                "L%d:\n",
-                label_end_while
-            );
+            fprintf(saida, "b L%d\n", label_while);
+            fprintf(saida, "L%d:\n", label_end_while);
             break;
 
         case AST_BLOCK:
@@ -654,6 +528,7 @@ static void cgen_command(AST *node)
             break;
 
         default:
+            cgen_ex(node);
             break;
     }
 }
@@ -687,28 +562,18 @@ static void cgen_block(AST *node)
 
     if (locals > 0) {
         symbol_table_push(&symbol_stack);
-
         register_declarations(node->child1);
-
-        fprintf(saida, 
-            "addiu $sp, $sp, -%d\n",
-            locals * 4
-        );
+        fprintf(saida, "addiu $sp, $sp, -%d\n", locals * 4);
     }
 
     cgen_command_list(node->child2);
 
     if (locals > 0) {
-        fprintf(saida, 
-            "addiu $sp, $sp, %d\n",
-            locals * 4
-        );
-
+        fprintf(saida, "addiu $sp, $sp, %d\n", locals * 4);
         symbol_table_pop(&symbol_stack);
     }
 
     proxima_posicao = old_position;
-
     escopo--;
 }
 
@@ -723,7 +588,6 @@ void codegen_generate(AST *root, const char *arquivo_entrada)
 
     comprimento = strlen(arquivo_entrada);
     tamanho = comprimento + 5;
-
     arquivo_saida = malloc(tamanho);
 
     if (arquivo_saida == NULL)
@@ -762,9 +626,7 @@ void codegen_generate(AST *root, const char *arquivo_entrada)
     collect_strings(root);
 
     fprintf(saida, ".data\n");
-
     print_strings();
-
     fprintf(saida, ".text\n");
     fprintf(saida, ".globl main\n");
     fprintf(saida, "main:\n");
@@ -776,11 +638,8 @@ void codegen_generate(AST *root, const char *arquivo_entrada)
     fprintf(saida, "syscall\n");
 
     free_strings();
-
     symbol_table_free(&symbol_stack);
-
     fclose(saida);
     saida = NULL;
-
     free(arquivo_saida);
 }
