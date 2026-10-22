@@ -101,7 +101,7 @@ static char *copiar_lexema(void)
     fprintf(stderr,
             "ERRO: COMENTARIO NAO TERMINA na linha %d\n",
             yylineno);
-    return 1;
+    exit(1);
 }
 
 \"[^\n\"]*\" {
@@ -114,9 +114,10 @@ static char *copiar_lexema(void)
     fprintf(stderr,
             "ERRO: CADEIA DE CARACTERES OCUPA MAIS DE UMA LINHA na linha %d\n",
             yylineno);
+    exit(1);
 }
 
-\'([^\\'\n]|\\[nt])\' {
+\\'([^\\'\n]|\\[nrt0\\'\"])\\' {
     yylval.token.lexeme = copiar_lexema();
     yylval.token.line = yylineno;
     return CARCONST;
@@ -247,6 +248,7 @@ static char *copiar_lexema(void)
             "ERRO: CARACTERE INVALIDO '%s' na linha %d\n",
             yytext,
             yylineno);
+    exit(1);
 }
 
 %%
