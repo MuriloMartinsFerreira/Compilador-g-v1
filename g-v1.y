@@ -152,15 +152,6 @@ static AST *criar_lista_nomes(AST *nome, AST *resto)
 %type <node> UnExpr
 %type <node> PrimExpr
 
-%left OU
-%left E
-%left IGUAL DIFERENTE
-%left MENOR MAIOR MAIORIGUAL MENORIGUAL
-%left MAIS MENOS
-%left MULT DIV
-%right NAO
-%right ATRIB
-
 %%
 
 Programa:
@@ -235,6 +226,7 @@ ListaDeclVar:
     ;
 
 DeclVar:
+    %empty
     {
         $$ = NULL;
     }
