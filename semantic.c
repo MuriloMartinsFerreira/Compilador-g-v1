@@ -73,10 +73,7 @@ static int analyze_identifier(AST *node, SymbolType *type)
     symbol = symbol_table_lookup(&symbol_stack, node->lexeme);
 
     if (symbol == NULL)
-        return semantic_error(
-            node->line,
-            "IDENTIFICADOR NAO DECLARADO"
-        );
+        return semantic_error(node->line, "IDENTIFICADOR NAO DECLARADO");
 
     *type = get_symbol_type(symbol->type);
 
@@ -106,10 +103,7 @@ static int analyze_expression(AST *node, SymbolType *type)
 
         case AST_ASSIGN:
             if (node->child1 == NULL || node->child2 == NULL)
-                return semantic_error(
-                    node->line,
-                    "ATRIBUICAO INVALIDA"
-                );
+                return semantic_error(node->line, "ATRIBUICAO INVALIDA");
 
             if (node->child1->type != AST_IDENTIFIER)
                 return semantic_error(
@@ -117,10 +111,7 @@ static int analyze_expression(AST *node, SymbolType *type)
                     "LADO ESQUERDO DA ATRIBUICAO INVALIDO"
                 );
 
-            symbol = symbol_table_lookup(
-                &symbol_stack,
-                node->child1->lexeme
-            );
+            symbol = symbol_table_lookup(&symbol_stack, node->child1->lexeme);
 
             if (symbol == NULL)
                 return semantic_error(
@@ -168,10 +159,7 @@ static int analyze_expression(AST *node, SymbolType *type)
                 return 0;
 
             if (left_type != right_type)
-                return semantic_error(
-                    node->line,
-                    "OPERANDOS DE TIPOS DIFERENTES"
-                );
+                return semantic_error(node->line, "OPERANDOS DE TIPOS DIFERENTES");
 
             *type = SYMBOL_INT;
             return 1;
@@ -187,10 +175,7 @@ static int analyze_expression(AST *node, SymbolType *type)
                 return 0;
 
             if (left_type != right_type)
-                return semantic_error(
-                    node->line,
-                    "OPERANDOS DE TIPOS DIFERENTES"
-                );
+                return semantic_error(node->line, "OPERANDOS DE TIPOS DIFERENTES");
 
             *type = SYMBOL_INT;
             return 1;
@@ -256,16 +241,10 @@ static int analyze_expression(AST *node, SymbolType *type)
         case AST_IF_ELSE:
         case AST_WHILE:
         case AST_STRING:
-            return semantic_error(
-                node->line,
-                "EXPRESSAO INVALIDA"
-            );
+            return semantic_error(node->line, "EXPRESSAO INVALIDA");
 
         default:
-            return semantic_error(
-                node->line,
-                "EXPRESSAO DESCONHECIDA"
-            );
+            return semantic_error(node->line, "EXPRESSAO DESCONHECIDA");
     }
 }
 
@@ -337,15 +316,9 @@ static int analyze_command(AST *node)
         case AST_READ:
             if (node->child1 == NULL ||
                 node->child1->type != AST_IDENTIFIER)
-                return semantic_error(
-                    node->line,
-                    "IDENTIFICADOR INVALIDO EM LEIA"
-                );
+                return semantic_error(node->line, "IDENTIFICADOR INVALIDO EM LEIA");
 
-            symbol = symbol_table_lookup(
-                &symbol_stack,
-                node->child1->lexeme
-            );
+            symbol = symbol_table_lookup(&symbol_stack, node->child1->lexeme);
 
             if (symbol == NULL)
                 return semantic_error(
@@ -367,10 +340,7 @@ static int analyze_command(AST *node)
                 return 0;
 
             if (type != SYMBOL_INT)
-                return semantic_error(
-                    node->child1->line,
-                    "CONDICAO DEVE SER DO TIPO INT"
-                );
+                return semantic_error(node->child1->line, "CONDICAO DEVE SER DO TIPO INT");
 
             return analyze_command(node->child2);
 
@@ -379,10 +349,7 @@ static int analyze_command(AST *node)
                 return 0;
 
             if (type != SYMBOL_INT)
-                return semantic_error(
-                    node->child1->line,
-                    "CONDICAO DEVE SER DO TIPO INT"
-                );
+                return semantic_error(node->child1->line, "CONDICAO DEVE SER DO TIPO INT");
 
             if (node->child2 == NULL)
                 return 1;
@@ -397,10 +364,7 @@ static int analyze_command(AST *node)
                 return 0;
 
             if (type != SYMBOL_INT)
-                return semantic_error(
-                    node->child1->line,
-                    "CONDICAO DEVE SER DO TIPO INT"
-                );
+                return semantic_error(node->child1->line, "CONDICAO DEVE SER DO TIPO INT");
 
             return analyze_command(node->child2);
 
@@ -408,10 +372,7 @@ static int analyze_command(AST *node)
             return analyze_block(node);
 
         default:
-            return semantic_error(
-                node->line,
-                "COMANDO DESCONHECIDO"
-            );
+            return analyze_expression(node, &type);
     }
 }
 
@@ -426,14 +387,10 @@ int semantic_analyze(AST *root)
 
     if (root->type != AST_PROGRAM) {
         symbol_table_free(&symbol_stack);
-        return semantic_error(
-            root->line,
-            "RAIZ DA AST INVALIDA"
-        );
+        return semantic_error(root->line, "RAIZ DA AST INVALIDA");
     }
 
     result = analyze_block(root->child1);
-
     symbol_table_free(&symbol_stack);
 
     return result;
