@@ -76,7 +76,7 @@ static const char *ast_type_name(ASTType type)
         case AST_MUL:            return "MUL";
         case AST_DIV:            return "DIV";
         case AST_NEG:            return "NEG";
-        case AST_NOT:            return "NOT";
+        case AST_NOT:             return "NOT";
 
         case AST_IDENTIFIER:     return "IDENTIFIER";
         case AST_INTCONST:       return "INTCONST";
